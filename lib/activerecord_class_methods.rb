@@ -53,10 +53,16 @@ module DraftPunk
         raise DraftPunk::ConfigurationError, "Cannot call requires_approval multiple times for #{name}" if const_defined? :DRAFT_PUNK_IS_SETUP
         self.const_set :DRAFT_NULLIFY_ATTRIBUTES, [nullify].flatten
 
-        amoeba do
-          nullify nullify
-          # Note that the amoeba associations and customize options are being set in setup_associations_and_scopes_for
+        after_destroy do
+          self.draft.destroy if self.has_draft?
         end
+
+        # amoeba do
+        #   nullify nullify
+        #   # Note that the amoeba associations and customize options are being set in setup_associations_and_scopes_for
+        # end
+
+        # Can we wait to set up amoeba until we need to create a draft instance?
         setup_amoeba_for self, set_default_scope: set_default_scope
         true
       end
@@ -126,7 +132,7 @@ module DraftPunk
         associations = target_class.set_valid_associations(associations)
         target_class.amoeba do
           enable
-          include_association target_class.const_get(:DRAFT_VALID_ASSOCIATIONS)
+        #   include_association target_class.const_get(:DRAFT_VALID_ASSOCIATIONS)
           customize target_class.set_approved_version_id_callback
         end
         target_class.const_set :DRAFT_PUNK_IS_SETUP, true

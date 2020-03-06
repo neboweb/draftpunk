@@ -121,14 +121,18 @@ module DraftPunk
         self.class.draft_target_associations.each do |assoc|
           reflection = self.class.reflect_on_association(assoc)
 
-          reflection_is_has_many(reflection) ? @live_version.send(assoc).destroy_all : @live_version.send(assoc).try(:destroy)
+          if reflection_is_habtm(reflection)
+            @live_version.send("#{assoc}=", @draft_version.send(assoc))
+          elsif reflection.options[:through].nil? # don't do anything for has_many :through relationships
+            reflection_is_has_many(reflection) ? @live_version.send(assoc).destroy_all : @live_version.send(assoc).try(:destroy)
 
-          attribute_updates = {}
-          attribute_updates[reflection.foreign_key] = @live_version.id
-          attribute_updates['updated_at']           = Time.now if reflection.klass.column_names.include?('updated_at')
-          attribute_updates['approved_version_id']  = nil if reflection.klass.tracks_approved_version?
+            attribute_updates = {}
+            attribute_updates[reflection.foreign_key] = @live_version.id
+            attribute_updates['updated_at']           = Time.now if reflection.klass.column_names.include?('updated_at')
+            attribute_updates['approved_version_id']  = nil if reflection.klass.tracks_approved_version?
 
-          reflection_is_has_many(reflection) ? @draft_version.send(assoc).update_all(attribute_updates) : @draft_version.send(assoc).update_columns(attribute_updates)
+            reflection_is_has_many(reflection) ? @draft_version.send(assoc).update_all(attribute_updates) : @draft_version.send(assoc).update_columns(attribute_updates)
+          end
         end
       end
 
@@ -151,6 +155,11 @@ module DraftPunk
       def association_is_has_many(name)
         # Note when implementing for Rails 4, macro is renamed to something else
         self.class.reflect_on_association(name.to_sym).macro == :has_many
+      end
+
+      def reflection_is_habtm(reflection)
+        # Note when implementing for Rails 4, macro is renamed to something else
+        reflection.macro == :has_and_belongs_to_many
       end
 
       def reflection_is_has_many(reflection)
