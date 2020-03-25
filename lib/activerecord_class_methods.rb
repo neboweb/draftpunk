@@ -44,7 +44,7 @@ module DraftPunk
       #    will be returned in ActiveRecord queries, unless you call Model.unscoped
       # @param associations [Array] Use internally; set associations to create drafts for in the CREATES_NESTED_DRAFTS_FOR constant
       # @return true
-      def requires_approval(associations: [], nullify: [], set_default_scope: false)
+      def requires_approval(associations: [], nullify: [], set_default_scope: false, is_child: false)
         return unless draft_punk_table_exists?(table_name) # Short circuits if you're migrating
 
         associations = draft_target_associations if associations.empty?
@@ -53,8 +53,11 @@ module DraftPunk
         raise DraftPunk::ConfigurationError, "Cannot call requires_approval multiple times for #{name}" if const_defined? :DRAFT_PUNK_IS_SETUP
         self.const_set :DRAFT_NULLIFY_ATTRIBUTES, [nullify].flatten
 
-        after_destroy do
-          self.draft.destroy if self.has_draft?
+        unless is_child
+          after_destroy do
+            # THIS IS THE PROBLEM
+            self.draft.destroy if self.has_draft?
+          end
         end
 
         # amoeba do
