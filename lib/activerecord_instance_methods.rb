@@ -130,8 +130,8 @@ module DraftPunk
             attribute_updates[reflection.foreign_key] = @live_version.id
             attribute_updates['updated_at']           = Time.now if reflection.klass.column_names.include?('updated_at')
             attribute_updates['approved_version_id']  = nil if reflection.klass.tracks_approved_version?
-
-            reflection_is_has_many(reflection) ? @draft_version.send(assoc).update_all(attribute_updates) : @draft_version.send(assoc).update_columns(attribute_updates)
+            
+            reflection_is_has_many(reflection) ? @draft_version.send(assoc).find_each { |m| m.update_attributes(attribute_updates) } : @draft_version.send(assoc).update_columns(attribute_updates)
           end
         end
       end
